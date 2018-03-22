@@ -9,6 +9,10 @@ package tigo
 // #cgo darwin LDFLAGS: -framework OpenGL -framework Cocoa
 // #include "tigr/tigr.h"
 // #include "tigr/tigr.c"
+//
+// void tigrPrintString(Tigr *dest, TigrFont *font, int x, int y, TPixel color, const char *text) {
+//     tigrPrint(dest, font, x, y, color, text);
+// }
 import "C"
 import "unsafe"
 
@@ -46,17 +50,13 @@ type Bitmap struct {
 // NewWindow creates a new empty window. title is UTF-8.
 func NewWindow(width, height int, title string, flags WindowFlag) *Bitmap {
 	tigr := C.tigrWindow(C.int(width), C.int(height), C.CString(title), C.int(flags))
-	return &Bitmap{
-		cBitmap: unsafe.Pointer(tigr),
-	}
+	return &Bitmap{unsafe.Pointer(tigr)}
 }
 
 // NewBitmap creates an empty off-screen bitmap.
 func NewBitmap(width, height int) *Bitmap {
 	tigr := C.tigrBitmap(C.int(width), C.int(height))
-	return &Bitmap{
-		cBitmap: unsafe.Pointer(tigr),
-	}
+	return &Bitmap{unsafe.Pointer(tigr)}
 }
 
 // Free deletes a window/bitmap.
@@ -179,4 +179,61 @@ func (bmp *Bitmap) BlitAlpha(sx, sy int, dest *Bitmap, dx, dy, w, h int, alpha f
 // BlitTint is same as Blit, but tints the source bitmap with a color.
 func (bmp *Bitmap) BlitTint(sx, sy int, dest *Bitmap, dx, dy, w, h int, tint Pixel) {
 	C.tigrBlitTint((*C.Tigr)(dest.cBitmap), (*C.Tigr)(bmp.cBitmap), C.int(dx), C.int(dy), C.int(sx), C.int(sy), C.int(w), C.int(h), cPixel(tint))
+}
+
+// Font printing
+
+// Glyph represents a glyph.
+type Glyph struct {
+	Code int
+	X    int
+	Y    int
+	W    int
+	H    int
+}
+
+// Font represents a font consisting of glyphs.
+type Font struct {
+	cFont unsafe.Pointer
+}
+
+// Codepage is a number representing a codepage.
+type Codepage int
+
+// Codepages.
+const (
+	// ASCII represents regular 7-bit ASCII codepage.
+	ASCII Codepage = 0
+	// Windows1252 represents Windows 1252 codepage.
+	Windows1252 Codepage = 1252
+)
+
+// LoadFont loads a font.
+// The font bitmap should contain all characters for the given codepage, excluding the first 32 control codes.
+// Supported codepages:
+//     0    - Regular 7-bit ASCII
+//     1252 - Windows 1252
+func LoadFont(bmp *Bitmap, codepage Codepage) *Font {
+	cFont := C.tigrLoadFont((*C.Tigr)(bmp.cBitmap), C.int(codepage))
+	return &Font{unsafe.Pointer(cFont)}
+}
+
+// Print prints UTF-8 text onto a bitmap.
+func (bmp *Bitmap) Print(font *Font, x, y int, color Pixel, text string) {
+	C.tigrPrintString((*C.Tigr)(bmp.cBitmap), (*C.TigrFont)(font.cFont), C.int(x), C.int(y), cPixel(color), C.CString(text))
+}
+
+// TextWidth returns the width of a string.
+func (font *Font) TextWidth(text string) int {
+	return int(C.tigrTextWidth((*C.TigrFont)(font.cFont), C.CString(text)))
+}
+
+// TextHeight returns the height of a string.
+func (font *Font) TextHeight(text string) int {
+	return int(C.tigrTextHeight((*C.TigrFont)(font.cFont), C.CString(text)))
+}
+
+// DefaultFont returns the default built-in font.
+func DefaultFont() *Font {
+	return &Font{unsafe.Pointer(C.tfont)}
 }
