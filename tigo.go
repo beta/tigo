@@ -224,17 +224,23 @@ func LoadFont(bmp *Bitmap, codepage Codepage) *Font {
 
 // Print prints UTF-8 text onto a bitmap.
 func (bmp *Bitmap) Print(font *Font, x, y int, color Pixel, text string) {
-	C.wrapTigrText((*C.Tigr)(bmp.cBitmap), (*C.TigrFont)(font.cFont), C.int(x), C.int(y), cPixel(color), C.CString(text))
+	cText := C.CString(text)
+	defer C.free(unsafe.Pointer(cText))
+	C.wrapTigrText((*C.Tigr)(bmp.cBitmap), (*C.TigrFont)(font.cFont), C.int(x), C.int(y), cPixel(color), cText)
 }
 
 // TextWidth returns the width of a string.
 func (font *Font) TextWidth(text string) int {
-	return int(C.tigrTextWidth((*C.TigrFont)(font.cFont), C.CString(text)))
+	cText := C.CString(text)
+	defer C.free(unsafe.Pointer(cText))
+	return int(C.tigrTextWidth((*C.TigrFont)(font.cFont), cText))
 }
 
 // TextHeight returns the height of a string.
 func (font *Font) TextHeight(text string) int {
-	return int(C.tigrTextHeight((*C.TigrFont)(font.cFont), C.CString(text)))
+	cText := C.CString(text)
+	defer C.free(unsafe.Pointer(cText))
+	return int(C.tigrTextHeight((*C.TigrFont)(font.cFont), cText))
 }
 
 // DefaultFont returns the default built-in font.
@@ -350,7 +356,10 @@ func (bmp *Bitmap) ReadChar() int {
 
 // LoadImage loads a PNG, from either a file. fileName is UTF-8.
 func LoadImage(fileName string) (*Bitmap, error) {
-	tigr := C.tigrLoadImage(C.CString(fileName))
+	cFileName := C.CString(fileName)
+	defer C.free(unsafe.Pointer(cFileName))
+
+	tigr := C.tigrLoadImage(cFileName)
 	if tigr == nil {
 		return nil, fmt.Errorf("failed to load image")
 	}
@@ -359,7 +368,10 @@ func LoadImage(fileName string) (*Bitmap, error) {
 
 // SaveImage saves a PNG to a file. fileName is UTF-8.
 func SaveImage(fileName string, bmp *Bitmap) error {
-	result := C.tigrSaveImage(C.CString(fileName), (*C.Tigr)(bmp.cBitmap))
+	cFileName := C.CString(fileName)
+	defer C.free(unsafe.Pointer(cFileName))
+
+	result := C.tigrSaveImage(cFileName, (*C.Tigr)(bmp.cBitmap))
 	if int(result) == 0 {
 		return fmt.Errorf("failed to save image")
 	}
