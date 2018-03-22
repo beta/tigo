@@ -14,7 +14,10 @@ package tigo
 //     tigrPrint(dest, font, x, y, color, text);
 // }
 import "C"
-import "unsafe"
+import (
+	"fmt"
+	"unsafe"
+)
 
 // Pixel represents one pixel.
 type Pixel struct {
@@ -340,4 +343,24 @@ func (bmp *Bitmap) KeyHeld(key Key) bool {
 // If no key is pressed, ReadChar returns 0.
 func (bmp *Bitmap) ReadChar() int {
 	return int(C.tigrReadChar((*C.Tigr)(bmp.cBitmap)))
+}
+
+// Bitmap I/O.
+
+// LoadImage loads a PNG, from either a file. fileName is UTF-8.
+func LoadImage(fileName string) (*Bitmap, error) {
+	tigr := C.tigrLoadImage(C.CString(fileName))
+	if tigr == nil {
+		return nil, fmt.Errorf("failed to load image")
+	}
+	return &Bitmap{unsafe.Pointer(tigr)}, nil
+}
+
+// SaveImage saves a PNG to a file. fileName is UTF-8.
+func SaveImage(fileName string, bmp *Bitmap) error {
+	result := C.tigrSaveImage(C.CString(fileName), (*C.Tigr)(bmp.cBitmap))
+	if int(result) == 0 {
+		return fmt.Errorf("failed to save image")
+	}
+	return nil
 }
