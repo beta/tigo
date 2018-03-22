@@ -7,6 +7,7 @@
 package tigo
 
 // #cgo darwin LDFLAGS: -framework OpenGL -framework Cocoa
+// #cgo windows LDFLAGS: -ld3d9
 // #include "tigr/tigr.h"
 // #include "tigr/tigr.c"
 //
