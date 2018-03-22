@@ -10,7 +10,7 @@ package tigo
 // #include "tigr/tigr.h"
 // #include "tigr/tigr.c"
 //
-// void tigrPrintString(Tigr *dest, TigrFont *font, int x, int y, TPixel color, const char *text) {
+// void wrapTigrText(Tigr *dest, TigrFont *font, int x, int y, TPixel color, const char *text) {
 //     tigrPrint(dest, font, x, y, color, text);
 // }
 import "C"
@@ -220,7 +220,7 @@ func LoadFont(bmp *Bitmap, codepage Codepage) *Font {
 
 // Print prints UTF-8 text onto a bitmap.
 func (bmp *Bitmap) Print(font *Font, x, y int, color Pixel, text string) {
-	C.tigrPrintString((*C.Tigr)(bmp.cBitmap), (*C.TigrFont)(font.cFont), C.int(x), C.int(y), cPixel(color), C.CString(text))
+	C.wrapTigrText((*C.Tigr)(bmp.cBitmap), (*C.TigrFont)(font.cFont), C.int(x), C.int(y), cPixel(color), C.CString(text))
 }
 
 // TextWidth returns the width of a string.
@@ -236,4 +236,108 @@ func (font *Font) TextHeight(text string) int {
 // DefaultFont returns the default built-in font.
 func DefaultFont() *Font {
 	return &Font{unsafe.Pointer(C.tfont)}
+}
+
+// User input.
+
+// Key represents a key scancode. ASCII ('A'-'Z' and '0'-'9') is used for letters/numbers.
+type Key int
+
+// Key scancode constants.
+const (
+	Pad0 Key = 128 + iota
+	Pad1
+	Pad2
+	Pad3
+	Pad4
+	Pad5
+	Pad6
+	Pad7
+	Pad8
+	Pad9
+	PadMul
+	PadAdd
+	PadEnter
+	PadSub
+	PadDot
+	PadDiv
+	F1
+	F2
+	F3
+	F4
+	F5
+	F6
+	F7
+	F8
+	F9
+	F10
+	F11
+	F12
+	Backspace
+	Tab
+	Return
+	Shift
+	Control
+	Alt
+	Pause
+	CapsLock
+	Escape
+	Space
+	PageUp
+	PageDown
+	End
+	Home
+	Left
+	Up
+	Right
+	Down
+	Insert
+	Delete
+	LWin
+	RWin
+	NumLock
+	ScrollLock
+	LShift
+	RShift
+	LControl
+	RControl
+	LAlt
+	RAlt
+	SemiColon
+	Equals
+	Comma
+	Minus
+	Dot
+	Slash
+	BackTick
+	LSquare
+	BackSlash
+	RSquare
+	Tick
+)
+
+// Mouse returns mouse input for a window.
+func (bmp *Bitmap) Mouse() (x, y, buttons int) {
+	var cX, cY, cButtons C.int
+	C.tigrMouse((*C.Tigr)(bmp.cBitmap), (*C.int)(&cX), (*C.int)(&cY), (*C.int)(&cButtons))
+	x, y, buttons = int(cX), int(cY), int(cButtons)
+	return
+}
+
+// KeyDown returns true if a key is pressed for a window.
+// KeyDown only tests for the initial press.
+func (bmp *Bitmap) KeyDown(key Key) bool {
+	return int(C.tigrKeyDown((*C.Tigr)(bmp.cBitmap), C.int(key))) > 0
+}
+
+// KeyHeld returns true if a key is held for a window.
+// KeyHeld repreats each frame.
+func (bmp *Bitmap) KeyHeld(key Key) bool {
+	return int(C.tigrKeyHeld((*C.Tigr)(bmp.cBitmap), C.int(key))) > 0
+}
+
+// ReadChar reads character input for a window and returns the Unicode value of the last key pressed.
+// If no key is pressed, ReadChar returns 0.
+func (bmp *Bitmap) ReadChar() int {
+	return int(C.tigrReadChar((*C.Tigr)(bmp.cBitmap)))
 }
